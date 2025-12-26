@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -113,6 +114,18 @@ var taskList []*Task
 var categoryMaxLength int
 var statusMaxLength int
 
+func runExtCmd(cmd string, args ...string) {
+	extCmd := exec.Command(cmd, args...)
+	extCmd.Stdin = os.Stdin
+	extCmd.Stdout = os.Stdout
+	extCmd.Stderr = os.Stderr
+
+	err := extCmd.Run()
+	if err != nil {
+		panic(err)
+	}
+}
+
 func openEditor(fileName string) {
 	editor := "vim"
 	for _, str := range os.Environ() {
@@ -122,15 +135,7 @@ func openEditor(fileName string) {
 		}
 	}
 
-	extCmd := exec.Command(editor, fileName)
-	extCmd.Stdin = os.Stdin
-	extCmd.Stdout = os.Stdout
-	extCmd.Stderr = os.Stderr
-
-	err := extCmd.Run()
-	if err != nil {
-		panic(err)
-	}
+	runExtCmd(editor, fileName)
 }
 
 func containsTaskPtr(task *Task, taskArr []*Task) (bool, int) {
@@ -292,6 +297,45 @@ func main() {
 						fmt.Println("Index of task to edit not provided. Check `help` for correct usage.")
 					}
 				}
+			case "rm":
+				if isInitialized() {
+					if len(opts) == 1 {
+						index, err := strconv.Atoi(opts[0])
+						if err != nil {
+							panic(err)
+						}
+
+						if index < 0 || index > len(taskList) {
+							fmt.Println("Invalid index provided.")
+						} else {
+							task := taskList[index-1]
+							taskName := task.id
+
+							runExtCmd("rm", "--recursive", "--interactive=once", fmt.Sprintf("%s/%s", TASKS_DIR, taskName))
+
+							tasks = slices.DeleteFunc(tasks, func(ele Task) bool {
+								return ele.id == task.id
+							})
+
+							flag, ind := containsTaskPtr(task, categoryTasks[task.category])
+							if flag {
+								categoryTasks[task.category] = slices.Delete(categoryTasks[task.category], ind, ind+1)
+							}
+							flag, ind = containsTaskPtr(task, statusTasks[task.status])
+							if flag {
+								statusTasks[task.status] = slices.Delete(statusTasks[task.status], ind, ind+1)
+							}
+							flag, ind = containsTaskPtr(task, taskList)
+							if flag {
+								taskList = slices.Delete(taskList, ind, ind+1)
+							}
+
+							fmt.Printf("Task `%s` deleted successfully.\n", taskName)
+						}
+					} else {
+						fmt.Println("Index of task to delete not provided. Check `help` for correct usage.")
+					}
+				}
 			case "ls":
 				if isInitialized() {
 					loadTasks()
@@ -368,16 +412,17 @@ func main() {
 				fmt.Print("\033[2J\033[H")
 			case "help":
 				fmt.Println("COMMANDS")
-				fmt.Println("  init         \t\t\t\tinitialize Trasker in current directory")
-				fmt.Println("  new          \t\t\t\tcreate and edit a new task")
-				fmt.Println("  edit <index> \t\t\t\tedit mentioned task from list (see `ls`)")
-				fmt.Println("  ls           \t\t\t\tlist all tasks")
-				fmt.Println("    [CATEGORY|STATUS]          \t\t\tlist tasks grouped by category/status")
-				fmt.Println("    [TODO|FIX|PERF|SPIKE]      \t\t\tlist tasks filtered by given category")
-				fmt.Println("    [ACTIVE|COMPLETED|DROPPED] \t\t\tlist tasks filtered by given status")
-				fmt.Println("  cls          \t\t\t\tclear the screen")
-				fmt.Println("  help         \t\t\t\tdisplay this help")
-				fmt.Println("  exit         \t\t\t\texit the program")
+				fmt.Println("  init         \t\t\t\t initialize Trasker in current directory")
+				fmt.Println("  new          \t\t\t\t create and edit a new task")
+				fmt.Println("  ls           \t\t\t\t list all tasks")
+				fmt.Println("    [CATEGORY|STATUS]          \t\t\t list tasks grouped by category/status")
+				fmt.Println("    [TODO|FIX|PERF|SPIKE]      \t\t\t list tasks filtered by given category")
+				fmt.Println("    [ACTIVE|COMPLETED|DROPPED] \t\t\t list tasks filtered by given status")
+				fmt.Println("  edit <index> \t\t\t\t edit mentioned task from list (see `ls`)")
+				fmt.Println("  rm <index>   \t\t\t\t delete mentioned task from list (see `ls`)")
+				fmt.Println("  cls          \t\t\t\t clear the screen")
+				fmt.Println("  help         \t\t\t\t display this help")
+				fmt.Println("  exit         \t\t\t\t exit the program")
 			case "exit":
 				loop = false
 			default:
