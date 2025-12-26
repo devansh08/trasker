@@ -341,6 +341,24 @@ func main() {
 						fmt.Println("Index of task to delete not provided. Check `help` for correct usage.")
 					}
 				}
+			case "cat":
+				if isInitialized() {
+					if len(opts) == 1 {
+						index, err := strconv.Atoi(opts[0])
+						if err != nil {
+							panic(err)
+						}
+
+						if index < 0 || index > len(taskList) {
+							fmt.Println("Invalid index provided.")
+						} else {
+							task := taskList[index-1]
+							runExtCmd("cat", fmt.Sprintf("%s/%s/%s", TASKS_DIR, task.id, TASK_MD_FILE))
+						}
+					} else {
+						fmt.Println("Index of task to delete not provided. Check `help` for correct usage.")
+					}
+				}
 			case "ls":
 				if isInitialized() {
 					loadTasks()
@@ -425,6 +443,7 @@ func main() {
 				fmt.Println("    [ACTIVE|COMPLETED|DROPPED] \t\t\t list tasks filtered by given status")
 				fmt.Println("  edit <index> \t\t\t\t edit mentioned task from list (see `ls`)")
 				fmt.Println("  rm <index>   \t\t\t\t delete mentioned task from list (see `ls`)")
+				fmt.Println("  cat <index>  \t\t\t\t display mentioned task from list (see `ls`)")
 				fmt.Println("  cls          \t\t\t\t clear the screen")
 				fmt.Println("  help         \t\t\t\t display this help")
 				fmt.Println("  exit         \t\t\t\t exit the program")
