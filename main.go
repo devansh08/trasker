@@ -311,26 +311,31 @@ func main() {
 							task := taskList[index-1]
 							taskName := task.id
 
-							runExtCmd("rm", "--recursive", "--interactive=once", fmt.Sprintf("%s/%s", TASKS_DIR, taskName))
+							taskDir := fmt.Sprintf("%s/%s", TASKS_DIR, taskName)
+							runExtCmd("rm", "--recursive", "--interactive=once", taskDir)
 
-							tasks = slices.DeleteFunc(tasks, func(ele Task) bool {
-								return ele.id == task.id
-							})
+							if !dirExists(taskDir) {
+								tasks = slices.DeleteFunc(tasks, func(ele Task) bool {
+									return ele.id == task.id
+								})
 
-							flag, ind := containsTaskPtr(task, categoryTasks[task.category])
-							if flag {
-								categoryTasks[task.category] = slices.Delete(categoryTasks[task.category], ind, ind+1)
-							}
-							flag, ind = containsTaskPtr(task, statusTasks[task.status])
-							if flag {
-								statusTasks[task.status] = slices.Delete(statusTasks[task.status], ind, ind+1)
-							}
-							flag, ind = containsTaskPtr(task, taskList)
-							if flag {
-								taskList = slices.Delete(taskList, ind, ind+1)
-							}
+								flag, ind := containsTaskPtr(task, categoryTasks[task.category])
+								if flag {
+									categoryTasks[task.category] = slices.Delete(categoryTasks[task.category], ind, ind+1)
+								}
+								flag, ind = containsTaskPtr(task, statusTasks[task.status])
+								if flag {
+									statusTasks[task.status] = slices.Delete(statusTasks[task.status], ind, ind+1)
+								}
+								flag, ind = containsTaskPtr(task, taskList)
+								if flag {
+									taskList = slices.Delete(taskList, ind, ind+1)
+								}
 
-							fmt.Printf("Task `%s` deleted successfully.\n", taskName)
+								fmt.Printf("Task `%s` deleted successfully.\n", taskName)
+							} else {
+								fmt.Println("Skipped deleting task. HINT: Enter `y` on deletion confirmation.")
+							}
 						}
 					} else {
 						fmt.Println("Index of task to delete not provided. Check `help` for correct usage.")
