@@ -139,9 +139,11 @@ func openEditor(fileName string) {
 }
 
 func containsTaskPtr(task *Task, taskArr []*Task) (bool, int) {
-	for i, val := range taskArr {
-		if task.id == val.id {
-			return true, i
+	if task != nil {
+		for i, val := range taskArr {
+			if val != nil && task.id == val.id {
+				return true, i
+			}
 		}
 	}
 
@@ -205,8 +207,8 @@ func updateTaskFromFile(dirName string, task *Task) {
 func loadTasks() {
 	if tasks == nil {
 		tasks = []Task{}
-		categoryTasks = map[Category][]*Task{}
-		statusTasks = map[Status][]*Task{}
+		categoryTasks = make(map[Category][]*Task)
+		statusTasks = make(map[Status][]*Task)
 
 		categoryMaxLength = 0
 		statusMaxLength = 0
