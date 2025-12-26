@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -107,8 +108,40 @@ var tasks []Task
 var categoryTasks map[Category][]*Task
 var statusTasks map[Status][]*Task
 
+var taskList []*Task
+
 var categoryMaxLength int
 var statusMaxLength int
+
+func openEditor(fileName string) {
+	editor := "vim"
+	for _, str := range os.Environ() {
+		if pair := strings.Split(str, "="); pair[0] == "EDITOR" {
+			editor = pair[1]
+			break
+		}
+	}
+
+	extCmd := exec.Command(editor, fileName)
+	extCmd.Stdin = os.Stdin
+	extCmd.Stdout = os.Stdout
+	extCmd.Stderr = os.Stderr
+
+	err := extCmd.Run()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func containsTaskPtr(task *Task, taskArr []*Task) (bool, int) {
+	for i, val := range taskArr {
+		if task.id == val.id {
+			return true, i
+		}
+	}
+
+	return false, -1
+}
 
 func dirExists(dirName string) bool {
 	info, err := os.Stat(dirName)
@@ -128,9 +161,7 @@ func isInitialized() bool {
 	return false
 }
 
-func updateTaskFromFile(dirName string) {
-	task := Task{id: dirName}
-
+func updateTaskFromFile(dirName string, task *Task) {
 	data, err := os.ReadFile(fmt.Sprintf("%s/%s/%s", TASKS_DIR, dirName, TASK_MD_FILE))
 	if err != nil {
 		panic(err)
@@ -144,18 +175,22 @@ func updateTaskFromFile(dirName string) {
 	task.description = strings.Trim(strings.Join(contents[5:], "\n"), "\n ")
 
 	if categoryTasks[task.category] == nil {
-		categoryTasks[task.category] = []*Task{&task}
+		categoryTasks[task.category] = []*Task{task}
+	} else if flag, index := containsTaskPtr(task, categoryTasks[task.category]); flag {
+		categoryTasks[task.category][index] = task
 	} else {
-		categoryTasks[task.category] = append(categoryTasks[task.category], &task)
+		categoryTasks[task.category] = append(categoryTasks[task.category], task)
 	}
 	if len(getCategoryString(task.category)) > categoryMaxLength {
 		categoryMaxLength = len(getCategoryString(task.category))
 	}
 
 	if statusTasks[task.status] == nil {
-		statusTasks[task.status] = []*Task{&task}
+		statusTasks[task.status] = []*Task{task}
+	} else if flag, index := containsTaskPtr(task, statusTasks[task.status]); flag {
+		statusTasks[task.status][index] = task
 	} else {
-		statusTasks[task.status] = append(statusTasks[task.status], &task)
+		statusTasks[task.status] = append(statusTasks[task.status], task)
 	}
 	if len(getStatusString(task.status)) > statusMaxLength {
 		statusMaxLength = len(getStatusString(task.status))
@@ -178,7 +213,7 @@ func loadTasks() {
 
 		for _, entry := range entries {
 			if entry.IsDir() {
-				updateTaskFromFile(entry.Name())
+				updateTaskFromFile(entry.Name(), &Task{id: entry.Name()})
 			}
 		}
 	}
@@ -224,25 +259,9 @@ func main() {
 							os.Mkdir(dirName, 0755)
 							os.WriteFile(fileName, []byte(DEFAULT_TASK_CONTENTS), 0644)
 
-							editor := "vim"
-							for _, str := range os.Environ() {
-								if pair := strings.Split(str, "="); pair[0] == "EDITOR" {
-									editor = pair[1]
-									break
-								}
-							}
+							openEditor(fileName)
 
-							cmd := exec.Command(editor, fileName)
-							cmd.Stdin = os.Stdin
-							cmd.Stdout = os.Stdout
-							cmd.Stderr = os.Stderr
-
-							err := cmd.Run()
-							if err != nil {
-								panic(err)
-							}
-
-							updateTaskFromFile(taskName)
+							updateTaskFromFile(taskName, &Task{id: taskName})
 
 							fmt.Printf("Task `%s` created successfully.\n", taskName)
 							break
@@ -250,11 +269,36 @@ func main() {
 						now = now.Add(time.Duration(1 * time.Second))
 					}
 				}
+			case "edit":
+				if isInitialized() {
+					if len(opts) == 1 {
+						index, err := strconv.Atoi(opts[0])
+						if err != nil {
+							panic(err)
+						}
+
+						if index < 0 || index > len(taskList) {
+							fmt.Println("Invalid index provided.")
+						} else {
+							task := taskList[index-1]
+							taskName := task.id
+
+							openEditor(fmt.Sprintf("%s/%s/%s", TASKS_DIR, taskName, TASK_MD_FILE))
+
+							updateTaskFromFile(taskName, task)
+							fmt.Printf("Task `%s` updated successfully.\n", taskName)
+						}
+					} else {
+						fmt.Println("Index of task to edit not provided. Check `help` for correct usage.")
+					}
+				}
 			case "ls":
 				if isInitialized() {
 					loadTasks()
 
 					if tasks != nil {
+						taskList = []*Task{}
+
 						if statusMode, categoryMode :=
 							len(opts) == 0 || (len(opts) == 1 && opts[0] == "STATUS"),
 							len(opts) == 1 && opts[0] == "CATEGORY"; statusMode || categoryMode {
@@ -268,6 +312,7 @@ func main() {
 								for status := range INVALID_STATUS {
 									fmt.Printf("%s Tasks:\n", getStatusString(status))
 									for _, task := range statusTasks[status] {
+										taskList = append(taskList, task)
 										fmt.Printf("%*d - %s | %-*s | %s\n", pad, count, task.id, categoryMaxLength, getCategoryString(task.category), task.name)
 										count++
 									}
@@ -276,6 +321,7 @@ func main() {
 								for category := range INVALID_CATEGORY {
 									fmt.Printf("%s Tasks:\n", getCategoryString(category))
 									for _, task := range categoryTasks[category] {
+										taskList = append(taskList, task)
 										fmt.Printf("%*d - %s | %-*s | %s\n", pad, count, task.id, statusMaxLength, getStatusString(task.status), task.name)
 										count++
 									}
@@ -290,6 +336,7 @@ func main() {
 
 								count := 1
 								fmt.Printf("%s Tasks:\n", opts[0])
+								taskList = statusTasks[status]
 								for _, task := range statusTasks[status] {
 									fmt.Printf("%*d - %s | %-*s | %s\n", pad, count, task.id, categoryMaxLength, getCategoryString(task.category), task.name)
 									count++
@@ -302,6 +349,7 @@ func main() {
 
 								count := 1
 								fmt.Printf("%s Tasks:\n", opts[0])
+								taskList = categoryTasks[category]
 								for _, task := range categoryTasks[category] {
 									fmt.Printf("%*d - %s | %-*s | %s\n", pad, count, task.id, statusMaxLength, getStatusString(task.status), task.name)
 									count++
@@ -320,15 +368,16 @@ func main() {
 				fmt.Print("\033[2J\033[H")
 			case "help":
 				fmt.Println("COMMANDS")
-				fmt.Println("  init \t\t\t\tinitialize Trasker in current directory")
-				fmt.Println("  new  \t\t\t\tcreate and edit a new task")
-				fmt.Println("  ls   \t\t\t\tlist all tasks")
-				fmt.Println("    [CATEGORY|STATUS]          \t\tlist tasks grouped by category/status")
-				fmt.Println("    [TODO|FIX|PERF|SPIKE]      \t\tlist tasks filtered by given category")
-				fmt.Println("    [ACTIVE|COMPLETED|DROPPED] \t\tlist tasks filtered by given status")
-				fmt.Println("  cls  \t\t\t\tclear the screen")
-				fmt.Println("  help \t\t\t\tdisplay this help")
-				fmt.Println("  exit \t\t\t\texit the program")
+				fmt.Println("  init         \t\t\t\tinitialize Trasker in current directory")
+				fmt.Println("  new          \t\t\t\tcreate and edit a new task")
+				fmt.Println("  edit <index> \t\t\t\tedit mentioned task from list (see `ls`)")
+				fmt.Println("  ls           \t\t\t\tlist all tasks")
+				fmt.Println("    [CATEGORY|STATUS]          \t\t\tlist tasks grouped by category/status")
+				fmt.Println("    [TODO|FIX|PERF|SPIKE]      \t\t\tlist tasks filtered by given category")
+				fmt.Println("    [ACTIVE|COMPLETED|DROPPED] \t\t\tlist tasks filtered by given status")
+				fmt.Println("  cls          \t\t\t\tclear the screen")
+				fmt.Println("  help         \t\t\t\tdisplay this help")
+				fmt.Println("  exit         \t\t\t\texit the program")
 			case "exit":
 				loop = false
 			default:
