@@ -12,6 +12,8 @@ import (
 	"time"
 )
 
+var Version = "dev"
+
 const TASKS_DIR = ".tasks"
 const DATE_FMT = "20060102-150405"
 const TASK_MD_FILE = "TASK.md"
@@ -450,7 +452,10 @@ func main() {
 				fmt.Println("  cat <index>  \t\t\t\t display mentioned task from list (see `ls`)")
 				fmt.Println("  cls          \t\t\t\t clear the screen")
 				fmt.Println("  help         \t\t\t\t display this help")
+				fmt.Println("  version      \t\t\t\t print the version")
 				fmt.Println("  exit         \t\t\t\t exit the program")
+			case "version":
+				fmt.Println(Version)
 			case "exit":
 				loop = false
 			default:
