@@ -256,6 +256,8 @@ func main() {
 				}
 			case "new":
 				if isInitialized() {
+					loadTasks()
+
 					now := time.Now()
 					for {
 						taskName := now.Format(DATE_FMT)
