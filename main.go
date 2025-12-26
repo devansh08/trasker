@@ -60,7 +60,7 @@ func getCategoryString(category Category) string {
 	case SPIKE:
 		return "SPIKE"
 	default:
-		return "INVALID_CATEGORY"
+		return ""
 	}
 }
 
@@ -95,7 +95,7 @@ func getStatusString(status Status) string {
 	case DROPPED:
 		return "DROPPED"
 	default:
-		return "INVALID_STATUS"
+		return ""
 	}
 }
 
