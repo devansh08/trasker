@@ -293,10 +293,25 @@ func main() {
 						} else {
 							task := taskList[index-1]
 							taskName := task.id
+							prevStatus := task.status
+							prevCategory := task.category
 
 							openEditor(fmt.Sprintf("%s/%s/%s", TASKS_DIR, taskName, TASK_MD_FILE))
 
 							updateTaskFromFile(taskName, task)
+
+							if prevCategory != task.category {
+								flag, ind := containsTaskPtr(task, categoryTasks[prevCategory])
+								if flag {
+									categoryTasks[prevCategory] = slices.Delete(categoryTasks[prevCategory], ind, ind+1)
+								}
+							}
+							if prevStatus != task.status {
+								flag, ind := containsTaskPtr(task, statusTasks[prevStatus])
+								if flag {
+									statusTasks[prevStatus] = slices.Delete(statusTasks[prevStatus], ind, ind+1)
+								}
+							}
 							fmt.Printf("Task `%s` updated successfully.\n", taskName)
 						}
 					} else {
