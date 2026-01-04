@@ -15,7 +15,8 @@ import (
 var Version = "dev"
 
 const TASKS_DIR = ".tasks"
-const DATE_FMT = "20060102-150405"
+const TASK_NAME_DATE_FMT = "20060102-150405"
+const TASK_UPDATE_TS_DATE_FMT = "2006-01-02 15:04:05"
 const TASK_MD_FILE = "TASK.md"
 const DEFAULT_TASK_CONTENTS = `# New Task
 
@@ -262,7 +263,7 @@ func main() {
 
 					now := time.Now()
 					for {
-						taskName := now.Format(DATE_FMT)
+						taskName := now.Format(TASK_NAME_DATE_FMT)
 						if !dirExists(taskName) {
 							dirName := fmt.Sprintf("%s/%s", TASKS_DIR, taskName)
 							fileName := fmt.Sprintf("%s/%s/%s", TASKS_DIR, taskName, TASK_MD_FILE)
@@ -296,7 +297,19 @@ func main() {
 							prevStatus := task.status
 							prevCategory := task.category
 
-							openEditor(fmt.Sprintf("%s/%s/%s", TASKS_DIR, taskName, TASK_MD_FILE))
+							fileName := fmt.Sprintf("%s/%s/%s", TASKS_DIR, taskName, TASK_MD_FILE)
+
+							file, err := os.OpenFile(fileName, os.O_APPEND|os.O_WRONLY, 0644)
+							if err != nil {
+								panic(err)
+							}
+							_, err = fmt.Fprintf(file, "\n## %s\n\n", time.Now().Format(TASK_UPDATE_TS_DATE_FMT))
+							if err != nil {
+								panic(err)
+							}
+							file.Close()
+
+							openEditor(fileName)
 
 							updateTaskFromFile(taskName, task)
 
