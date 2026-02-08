@@ -20,7 +20,7 @@ const TASK_UPDATE_TS_DATE_FMT = "2006-01-02 15:04:05"
 const TASK_MD_FILE = "TASK.md"
 const DEFAULT_TASK_CONTENTS = `# New Task
 
-- CATEGORY: TODO|FIX|PERF|SPIKE
+- CATEGORY: TODO|FIX|PERF|SPIKE|FEAT
 - STATUS: ACTIVE|COMPLETED|DROPPED
 
 This is a new task.`
@@ -32,6 +32,7 @@ const (
 	FIX
 	PERF
 	SPIKE
+	FEAT
 	INVALID_CATEGORY
 )
 
@@ -45,6 +46,8 @@ func getCategory(category string) Category {
 		return PERF
 	case "SPIKE":
 		return SPIKE
+	case "FEAT":
+		return FEAT
 	default:
 		return INVALID_CATEGORY
 	}
@@ -60,6 +63,8 @@ func getCategoryString(category Category) string {
 		return "PERF"
 	case SPIKE:
 		return "SPIKE"
+	case FEAT:
+		return "FEAT"
 	default:
 		return ""
 	}
@@ -473,7 +478,7 @@ func main() {
 				fmt.Println("  new          \t\t\t\t create and edit a new task")
 				fmt.Println("  ls           \t\t\t\t list all tasks")
 				fmt.Println("    [CATEGORY|STATUS]          \t\t\t list tasks grouped by category/status")
-				fmt.Println("    [TODO|FIX|PERF|SPIKE]      \t\t\t list tasks filtered by given category")
+				fmt.Println("    [TODO|FIX|PERF|SPIKE|FEAT] \t\t\t list tasks filtered by given category")
 				fmt.Println("    [ACTIVE|COMPLETED|DROPPED] \t\t\t list tasks filtered by given status")
 				fmt.Println("  edit <index> \t\t\t\t edit mentioned task from list (see `ls`)")
 				fmt.Println("  rm <index>   \t\t\t\t delete mentioned task from list (see `ls`)")
